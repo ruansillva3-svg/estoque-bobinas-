@@ -1,6 +1,9 @@
 
 
 Index · HTML
+ 
+ 
+Index · HTML
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -73,6 +76,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
   display: none; align-items: center; gap: 10px;
   padding: 8px 20px; background: var(--surface2); border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
+  position: relative; z-index: 1100;
 }
 #supabase-cfg input {
   background: var(--bg); border: 1px solid var(--border2); color: var(--text);
@@ -315,9 +319,98 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
   .stat-card { min-width: 90px; padding: 10px 12px; }
   .stat-value { font-size: 20px; }
 }
+ 
+/* ── LOGIN ── */
+#login-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--bg); display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.login-box {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 28px; width: 380px; max-width: 100%;
+}
+.login-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; text-align: center; }
+.login-sub { font-size: 12px; color: var(--muted); margin-bottom: 20px; text-align: center; }
+.login-tabs { display: flex; gap: 6px; margin-bottom: 18px; background: var(--bg); border-radius: var(--radius); padding: 3px; }
+.login-tab-btn {
+  flex: 1; padding: 8px; background: none; border: none; border-radius: 4px;
+  color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font);
+}
+.login-tab-btn.active { background: var(--blue); color: #fff; }
+.login-error { display: none; background: rgba(220,38,38,.12); color: #f87171; border: 1px solid rgba(248,113,113,.2); border-radius: var(--radius); padding: 8px 12px; font-size: 12px; margin-bottom: 14px; }
+.user-chip {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; color: var(--muted2); padding: 3px 10px;
+  border: 1px solid var(--border2); border-radius: 20px;
+}
+.user-chip button { background: none; border: none; color: var(--muted); font-size: 11px; cursor: pointer; text-decoration: underline; font-family: var(--font); padding: 0; }
+.op-display { background: var(--bg); border: 1px solid var(--border2); border-radius: var(--radius); padding: 10px 14px; font-size: 14px; color: var(--text); }
+ 
+/* ── SUB-TABS RELATÓRIO ── */
+.subtabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.subtab-btn {
+  padding: 7px 16px; background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 20px; color: var(--muted); font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: var(--font);
+}
+.subtab-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+.period-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.period-row select, .period-row input { background: var(--surface); border: 1px solid var(--border2); color: var(--text); font-family: var(--font); font-size: 12px; padding: 7px 10px; border-radius: var(--radius); outline: none; }
 </style>
 </head>
 <body>
+ 
+<!-- LOGIN -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-title">🏭 Controle de Pátio</div>
+    <div class="login-sub">Bobinas L4 — acesso do colaborador</div>
+ 
+    <div class="login-tabs">
+      <button class="login-tab-btn active" id="lt-entrar" onclick="loginSetTab('entrar')">Entrar</button>
+      <button class="login-tab-btn" id="lt-cadastrar" onclick="loginSetTab('cadastrar')">Criar cadastro</button>
+    </div>
+ 
+    <div class="login-error" id="login-error"></div>
+ 
+    <!-- FORM: ENTRAR -->
+    <div id="form-entrar">
+      <div class="form-group">
+        <label>E-mail corporativo</label>
+        <input id="lg-email" type="email" placeholder="nome@gerdau.com.br">
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input id="lg-senha" type="password" placeholder="••••••••">
+      </div>
+      <button class="btn-primary" id="btn-entrar" onclick="fazerLogin()">Entrar</button>
+    </div>
+ 
+    <!-- FORM: CADASTRAR -->
+    <div id="form-cadastrar" style="display:none">
+      <div class="form-group">
+        <label>Nome completo</label>
+        <input id="cd-nome" type="text" placeholder="Nome e sobrenome">
+      </div>
+      <div class="form-group">
+        <label>E-mail corporativo</label>
+        <input id="cd-email" type="email" placeholder="nome@gerdau.com.br">
+      </div>
+      <div class="form-group">
+        <label>Matrícula</label>
+        <input id="cd-matricula" type="text" placeholder="Ex: 123456">
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input id="cd-senha" type="password" placeholder="Crie uma senha">
+      </div>
+      <button class="btn-primary" id="btn-cadastrar" onclick="fazerCadastro()">Criar cadastro e entrar</button>
+    </div>
+ 
+    <button class="btn-secondary" onclick="toggleCfg()" style="margin-top:14px">⚙ Configurar Supabase</button>
+  </div>
+</div>
  
 <!-- HEADER -->
 <div id="header">
@@ -325,6 +418,10 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
     <div class="header-logo">🏭 Controle de Pátio <span>— Bobinas L4</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
+    <div class="user-chip" id="user-chip" style="display:none">
+      👤 <span id="user-chip-nome">—</span>
+      <button onclick="fazerLogout()">sair</button>
+    </div>
     <button onclick="toggleCfg()" style="background:none;border:1px solid var(--border2);color:var(--muted);padding:4px 10px;border-radius:var(--radius);font-size:11px;cursor:pointer;font-family:var(--font)">⚙ Config</button>
     <div class="sync-badge offline" id="sync-badge"><div class="dot"></div><span id="sync-text">Desconectado</span></div>
   </div>
@@ -408,18 +505,17 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
       <div class="form-row">
         <div class="form-group">
           <label>Área</label>
-          <select id="ent-area" onchange="atualizarVagasEntrada()">
+          <select id="ent-area" onchange="atualizarRuasEntrada()">
             <option value="frente">Frente L4</option>
             <option value="fundo">Fundo L4</option>
           </select>
         </div>
         <div class="form-group">
           <label>Tipo</label>
-          <select id="ent-tipo" onchange="atualizarVagasEntrada()">
+          <select id="ent-tipo" onchange="atualizarRuasEntrada()">
             <option value="normal">Normal</option>
             <option value="recup">Recuperada</option>
             <option value="nconf">Não conforme</option>
-            <option value="maquina">Máquina/Estac.</option>
           </select>
         </div>
       </div>
@@ -427,7 +523,7 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
       <div class="form-row">
         <div class="form-group">
           <label>Rua</label>
-          <select id="ent-rua" onchange="atualizarVagasEntrada()"></select>
+          <select id="ent-rua" onchange="atualizarBaiasEntrada()"></select>
         </div>
         <div class="form-group">
           <label>Baia</label>
@@ -435,9 +531,31 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
         </div>
       </div>
  
+      <div class="form-row">
+        <div class="form-group">
+          <label>Quantidade de bobinas</label>
+          <input id="ent-qtd" type="number" min="1" step="1" value="1">
+        </div>
+        <div class="form-group">
+          <label>Bitola do material (mm)</label>
+          <input id="ent-bitola" type="text" placeholder="Ex: 6.35">
+        </div>
+      </div>
+ 
+      <div class="form-group">
+        <label>Nível de oxidação</label>
+        <select id="ent-oxidacao">
+          <option value="1">1 — Novo</option>
+          <option value="2">2 — Leve</option>
+          <option value="3">3 — Moderado</option>
+          <option value="4">4 — Avançado</option>
+          <option value="5">5 — Mega oxidado</option>
+        </select>
+      </div>
+ 
       <div class="form-group">
         <label>Operador</label>
-        <input id="ent-op" type="text" placeholder="Nome do operador">
+        <div class="op-display" id="ent-op-display">—</div>
       </div>
  
       <button class="btn-primary" onclick="registrarEntrada()" id="btn-entrada">Confirmar Entrada</button>
@@ -469,11 +587,14 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
             <div><span style="color:var(--muted)">Tipo: </span><b id="sai-tipo-info">—</b></div>
             <div><span style="color:var(--muted)">Entrada: </span><b id="sai-data">—</b></div>
             <div><span style="color:var(--muted)">Dias no pátio: </span><b id="sai-dias">—</b></div>
+            <div><span style="color:var(--muted)">Quantidade: </span><b id="sai-qtd">—</b></div>
+            <div><span style="color:var(--muted)">Bitola: </span><b id="sai-bitola">—</b></div>
+            <div><span style="color:var(--muted)">Oxidação: </span><b id="sai-oxidacao">—</b></div>
           </div>
         </div>
         <div class="form-group">
           <label>Operador</label>
-          <input id="sai-op" type="text" placeholder="Nome do operador">
+          <div class="op-display" id="sai-op-display">—</div>
         </div>
         <button class="btn-primary" onclick="registrarSaida()" id="btn-saida">Confirmar Saída</button>
       </div>
@@ -490,28 +611,44 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
 ═══════════════════════════════════════════ -->
 <div id="panel-historico" class="panel">
   <div class="hist-wrapper">
+ 
+    <div class="subtabs">
+      <button class="subtab-btn active" id="hsub-entrada" onclick="setHistSubtab('entrada')">➕ Entradas</button>
+      <button class="subtab-btn" id="hsub-saida" onclick="setHistSubtab('saida')">↗ Saídas</button>
+    </div>
+ 
+    <div class="period-row">
+      <select id="hist-periodo-tipo" onchange="renderHistorico()">
+        <option value="todos">Todo o período</option>
+        <option value="dia">Um dia específico</option>
+        <option value="mes">Um mês</option>
+        <option value="ano">Um ano</option>
+      </select>
+      <input id="hist-dia" type="date" style="display:none" oninput="renderHistorico()">
+      <input id="hist-mes" type="month" style="display:none" oninput="renderHistorico()">
+      <select id="hist-ano" style="display:none" onchange="renderHistorico()"></select>
+    </div>
+ 
     <div class="hist-toolbar">
       <input id="hist-busca" type="text" placeholder="Buscar por código, rua, operador..." oninput="renderHistorico()">
-      <select id="hist-filtro" onchange="renderHistorico()">
-        <option value="">Todos</option>
-        <option value="entrada">Entradas</option>
-        <option value="saida">Saídas</option>
-      </select>
     </div>
+ 
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
             <th>Data/Hora</th>
-            <th>Tipo</th>
             <th>Código</th>
             <th>Localização</th>
             <th>Categoria</th>
+            <th>Qtd</th>
+            <th>Bitola</th>
+            <th>Oxidação</th>
             <th>Operador</th>
           </tr>
         </thead>
         <tbody id="hist-body">
-          <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--muted)">Carregando histórico...</td></tr>
+          <tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Carregando histórico...</td></tr>
         </tbody>
       </table>
     </div>
@@ -551,11 +688,18 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
 // ══════════════════════════════════════════════════════════
 // CONFIG & ESTADO
 // ══════════════════════════════════════════════════════════
-let SB_URL = localStorage.getItem('sb_url') || '';
-let SB_KEY = localStorage.getItem('sb_key') || '';
+// Credenciais fixas do projeto — conecta automaticamente em qualquer
+// aparelho, sem precisar configurar nada manualmente. Se um dia precisar
+// trocar de projeto Supabase, é só editar as duas linhas abaixo.
+const SB_URL_PADRAO = 'https://vsgkaagdxidgvtrzeyuy.supabase.co';
+const SB_KEY_PADRAO = 'sb_publishable_4gH0wAaqh8kr9U7BH5xA6Q_Eiprw8FY';
+ 
+let SB_URL = localStorage.getItem('sb_url') || SB_URL_PADRAO;
+let SB_KEY = localStorage.getItem('sb_key') || SB_KEY_PADRAO;
 let supabase = null;
 let vagas = {};       // chave: "area-rua-baia" → objeto da vaga
 let historico = [];   // todos os registros carregados
+let colaboradorLogado = null; // { nome, email, matricula }
  
 // Estrutura do pátio
 const PATIO = {
@@ -618,6 +762,109 @@ async function carregarHistorico() {
 }
  
 function chaveVaga(area, rua, baia) { return `${area}-${rua}-${baia}`; }
+ 
+// ══════════════════════════════════════════════════════════
+// LOGIN (tabela própria "colaboradores" — sem Supabase Auth,
+// então não pede confirmação de e-mail)
+// ══════════════════════════════════════════════════════════
+async function hashSenha(senha) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(senha));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+ 
+function loginSetTab(tab) {
+  document.getElementById('lt-entrar').classList.toggle('active', tab === 'entrar');
+  document.getElementById('lt-cadastrar').classList.toggle('active', tab === 'cadastrar');
+  document.getElementById('form-entrar').style.display = tab === 'entrar' ? 'block' : 'none';
+  document.getElementById('form-cadastrar').style.display = tab === 'cadastrar' ? 'block' : 'none';
+  loginErro('');
+}
+ 
+function loginErro(msg) {
+  const el = document.getElementById('login-error');
+  if (!msg) { el.style.display = 'none'; el.textContent = ''; return; }
+  el.style.display = 'block'; el.textContent = msg;
+}
+ 
+async function fazerCadastro() {
+  if (!supabase) { loginErro('Configure o Supabase primeiro (botão ⚙ Config).'); return; }
+  const nome = document.getElementById('cd-nome').value.trim();
+  const email = document.getElementById('cd-email').value.trim().toLowerCase();
+  const matricula = document.getElementById('cd-matricula').value.trim();
+  const senha = document.getElementById('cd-senha').value;
+ 
+  if (!nome || !email || !matricula || !senha) { loginErro('Preencha todos os campos.'); return; }
+ 
+  const btn = document.getElementById('btn-cadastrar');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  try {
+    const senha_hash = await hashSenha(senha);
+    const { error } = await supabase.from('colaboradores').insert({
+      nome, email, matricula, senha_hash
+    });
+    if (error) {
+      if (String(error.message).toLowerCase().includes('duplicate')) {
+        loginErro('Este e-mail já está cadastrado. Use "Entrar".');
+      } else {
+        loginErro('Erro ao cadastrar: ' + error.message);
+      }
+      return;
+    }
+    salvarSessao({ nome, email, matricula });
+  } catch(e) {
+    loginErro('Erro ao cadastrar: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Criar cadastro e entrar';
+  }
+}
+ 
+async function fazerLogin() {
+  if (!supabase) { loginErro('Configure o Supabase primeiro (botão ⚙ Config).'); return; }
+  const email = document.getElementById('lg-email').value.trim().toLowerCase();
+  const senha = document.getElementById('lg-senha').value;
+  if (!email || !senha) { loginErro('Informe e-mail e senha.'); return; }
+ 
+  const btn = document.getElementById('btn-entrar');
+  btn.disabled = true; btn.textContent = 'Entrando...';
+  try {
+    const senha_hash = await hashSenha(senha);
+    const { data, error } = await supabase.from('colaboradores').select('*').eq('email', email).maybeSingle();
+    if (error) { loginErro('Erro ao entrar: ' + error.message); return; }
+    if (!data || data.senha_hash !== senha_hash) { loginErro('E-mail ou senha incorretos.'); return; }
+    salvarSessao({ nome: data.nome, email: data.email, matricula: data.matricula });
+  } catch(e) {
+    loginErro('Erro ao entrar: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Entrar';
+  }
+}
+ 
+function salvarSessao(colab) {
+  colaboradorLogado = colab;
+  localStorage.setItem('colaborador_logado', JSON.stringify(colab));
+  aplicarSessao();
+}
+ 
+function aplicarSessao() {
+  document.getElementById('login-overlay').style.display = colaboradorLogado ? 'none' : 'flex';
+  document.getElementById('user-chip').style.display = colaboradorLogado ? 'flex' : 'none';
+  if (colaboradorLogado) {
+    document.getElementById('user-chip-nome').textContent = colaboradorLogado.nome;
+    document.getElementById('ent-op-display').textContent = colaboradorLogado.nome;
+  }
+}
+ 
+function fazerLogout() {
+  colaboradorLogado = null;
+  localStorage.removeItem('colaborador_logado');
+  aplicarSessao();
+}
+ 
+function checarSessao() {
+  const salvo = localStorage.getItem('colaborador_logado');
+  if (salvo) { try { colaboradorLogado = JSON.parse(salvo); } catch(e) {} }
+  aplicarSessao();
+}
  
 // ══════════════════════════════════════════════════════════
 // RENDER MAPAS
@@ -742,6 +989,31 @@ function buildVagaHTML(area, rua, baia) {
 // ══════════════════════════════════════════════════════════
 // STATS
 // ══════════════════════════════════════════════════════════
+function contarArea(area) {
+  let total = 0, ocupadas = 0, fifo = 0, livre = 0, bobinas = 0;
+  if (area === 'frente') {
+    for (let r = 1; r <= 12; r++) {
+      const numBaias = getBaiasRuaFrente(r);
+      for (let b = 1; b <= numBaias; b++) {
+        total++;
+        const v = vagas[chaveVaga(area, r, b)];
+        if (v && v.ocupada) { ocupadas++; bobinas += Number(v.quantidade) || 1; if (diffDias(v.entrada_em) >= 7) fifo++; }
+        else livre++;
+      }
+    }
+  } else {
+    for (const { r, b: numBaias } of PATIO.fundo.ruas) {
+      for (let b = 1; b <= numBaias; b++) {
+        total++;
+        const v = vagas[chaveVaga(area, r, b)];
+        if (v && v.ocupada) { ocupadas++; bobinas += Number(v.quantidade) || 1; if (diffDias(v.entrada_em) >= 7) fifo++; }
+        else livre++;
+      }
+    }
+  }
+  return { total, ocupadas, fifo, livre, bobinas };
+}
+ 
 function renderStats() {
   renderStatsArea('frente');
   renderStatsArea('fundo');
@@ -751,34 +1023,17 @@ function renderStatsArea(area) {
   const el = document.getElementById('stats-' + area);
   if (!el) return;
  
-  let total = 0, ocupadas = 0, fifo = 0, livre = 0;
- 
-  if (area === 'frente') {
-    for (let r = 1; r <= 12; r++) {
-      const numBaias = getBaiasRuaFrente(r);
-      for (let b = 1; b <= numBaias; b++) {
-        total++;
-        const v = vagas[chaveVaga(area, r, b)];
-        if (v && v.ocupada) { ocupadas++; if (diffDias(v.entrada_em) >= 7) fifo++; }
-        else livre++;
-      }
-    }
-  } else {
-    for (const { r, b: numBaias } of PATIO.fundo.ruas) {
-      for (let b = 1; b <= numBaias; b++) {
-        total++;
-        const v = vagas[chaveVaga(area, r, b)];
-        if (v && v.ocupada) { ocupadas++; if (diffDias(v.entrada_em) >= 7) fifo++; }
-        else livre++;
-      }
-    }
-  }
+  const { total, ocupadas, fifo, livre } = contarArea(area);
+  const cFrente = contarArea('frente');
+  const cFundo = contarArea('fundo');
+  const totalBobinasPatio = cFrente.bobinas + cFundo.bobinas;
  
   el.innerHTML = `
     <div class="stat-card"><div class="stat-label">Total vagas</div><div class="stat-value">${total}</div></div>
     <div class="stat-card"><div class="stat-label">Livres</div><div class="stat-value green">${livre}</div></div>
     <div class="stat-card"><div class="stat-label">Ocupadas</div><div class="stat-value red">${ocupadas}</div></div>
     <div class="stat-card"><div class="stat-label">FIFO urgente</div><div class="stat-value orange">${fifo}</div></div>
+    <div class="stat-card"><div class="stat-label">Total no pátio (Frente+Fundo)</div><div class="stat-value blue">${totalBobinasPatio}</div></div>
   `;
 }
  
@@ -826,17 +1081,29 @@ function closeModal() { document.getElementById('modal-overlay').classList.remov
 // ══════════════════════════════════════════════════════════
 // ENTRADA
 // ══════════════════════════════════════════════════════════
-function atualizarVagasEntrada() {
+// Regenera a lista de RUAS (chamado quando Área ou Tipo mudam).
+// Antes, essa mesma função também era chamada no onchange da Rua, o que
+// recriava as <option> da própria Rua a cada troca e sempre voltava para a
+// primeira opção da lista — por isso a Rua 02 parecia "travada". Agora a
+// troca de Rua só chama atualizarBaiasEntrada(), sem recriar as opções de Rua.
+function atualizarRuasEntrada() {
+  const area = document.getElementById('ent-area').value;
+  const tipo = document.getElementById('ent-tipo').value;
+  const ruaSel = document.getElementById('ent-rua');
+ 
+  const ruasDisponiveis = getRuasDisponiveis(area, tipo);
+  ruaSel.innerHTML = ruasDisponiveis.map(r => `<option value="${r}">Rua ${pad2(r)}</option>`).join('');
+ 
+  atualizarBaiasEntrada();
+}
+ 
+// Regenera só a lista de BAIAS, preservando a Rua selecionada.
+function atualizarBaiasEntrada() {
   const area = document.getElementById('ent-area').value;
   const tipo = document.getElementById('ent-tipo').value;
   const ruaSel = document.getElementById('ent-rua');
   const baiaSel = document.getElementById('ent-baia');
  
-  // Popular ruas
-  const ruasDisponiveis = getRuasDisponiveis(area, tipo);
-  ruaSel.innerHTML = ruasDisponiveis.map(r => `<option value="${r}">Rua ${pad2(r)}</option>`).join('');
- 
-  // Popular baias
   const ruaN = parseInt(ruaSel.value);
   const baiasDisponiveis = getBaiasDisponiveis(area, ruaN, tipo);
   baiaSel.innerHTML = baiasDisponiveis
@@ -869,24 +1136,29 @@ function getBaiasDisponiveis(area, rua, tipo) {
 function preencherEntrada(area, rua, baia) {
   showTab('entrada');
   document.getElementById('ent-area').value = area;
-  atualizarVagasEntrada();
+  atualizarRuasEntrada();
   document.getElementById('ent-rua').value = rua;
-  atualizarVagasEntrada();
+  atualizarBaiasEntrada();
   document.getElementById('ent-baia').value = baia;
   document.getElementById('ent-cod').focus();
 }
  
 async function registrarEntrada() {
   if (!supabase) { toast('❌ Configure o Supabase primeiro'); return; }
+  if (!colaboradorLogado) { toast('❌ Faça login primeiro'); return; }
  
-  const cod  = document.getElementById('ent-cod').value.trim();
-  const area = document.getElementById('ent-area').value;
-  const tipo = document.getElementById('ent-tipo').value;
-  const rua  = parseInt(document.getElementById('ent-rua').value);
-  const baia = parseInt(document.getElementById('ent-baia').value);
-  const op   = document.getElementById('ent-op').value.trim();
+  const cod      = document.getElementById('ent-cod').value.trim();
+  const area     = document.getElementById('ent-area').value;
+  const tipo     = document.getElementById('ent-tipo').value;
+  const rua      = parseInt(document.getElementById('ent-rua').value);
+  const baia     = parseInt(document.getElementById('ent-baia').value);
+  const qtd      = parseInt(document.getElementById('ent-qtd').value) || 1;
+  const bitola   = document.getElementById('ent-bitola').value.trim();
+  const oxidacao = parseInt(document.getElementById('ent-oxidacao').value);
+  const op       = colaboradorLogado.nome;
  
   if (!cod) { toast('⚠️ Informe o código da bobina'); return; }
+  if (!rua || !baia) { toast('⚠️ Selecione rua e baia'); return; }
  
   // Checar se já existe no pátio
   const jaExiste = Object.values(vagas).find(v => v.ocupada && v.codigo === cod);
@@ -901,7 +1173,8 @@ async function registrarEntrada() {
     // Upsert na tabela vagas
     const { error: errV } = await supabase.from('vagas').upsert({
       area, rua, baia, ocupada: true,
-      codigo: cod, tipo, operador: op, entrada_em: agora
+      codigo: cod, tipo, operador: op, entrada_em: agora,
+      quantidade: qtd, bitola, oxidacao
     }, { onConflict: 'area,rua,baia' });
     if (errV) throw errV;
  
@@ -909,7 +1182,8 @@ async function registrarEntrada() {
     const { error: errH } = await supabase.from('historico').insert({
       tipo_mov: 'entrada', codigo: cod,
       area, rua, baia, tipo_bobina: tipo,
-      operador: op, criado_em: agora
+      operador: op, criado_em: agora,
+      quantidade: qtd, bitola, oxidacao
     });
     if (errH) throw errH;
  
@@ -917,7 +1191,7 @@ async function registrarEntrada() {
     limparFormEntrada();
     await carregarTudo();
   } catch(e) {
-    toast('❌ Erro: ' + e.message);
+    toast('❌ Erro ao salvar: ' + e.message);
   } finally {
     btn.disabled = false; btn.textContent = 'Confirmar Entrada';
   }
@@ -925,10 +1199,12 @@ async function registrarEntrada() {
  
 function limparFormEntrada() {
   document.getElementById('ent-cod').value = '';
-  document.getElementById('ent-op').value = '';
   document.getElementById('ent-area').value = 'frente';
   document.getElementById('ent-tipo').value = 'normal';
-  atualizarVagasEntrada();
+  document.getElementById('ent-qtd').value = '1';
+  document.getElementById('ent-bitola').value = '';
+  document.getElementById('ent-oxidacao').value = '1';
+  atualizarRuasEntrada();
 }
  
 // ══════════════════════════════════════════════════════════
@@ -964,6 +1240,10 @@ function buscarBobina() {
   document.getElementById('sai-data').textContent = fmtDate(vaga.entrada_em);
   document.getElementById('sai-dias').textContent = dias + 'd';
   document.getElementById('sai-dias').style.color = dias >= 7 ? 'var(--c-fifo)' : 'inherit';
+  document.getElementById('sai-qtd').textContent = vaga.quantidade ?? '—';
+  document.getElementById('sai-bitola').textContent = vaga.bitola || '—';
+  document.getElementById('sai-oxidacao').textContent = vaga.oxidacao ? `Nível ${vaga.oxidacao}` : '—';
+  document.getElementById('sai-op-display').textContent = colaboradorLogado ? colaboradorLogado.nome : '—';
  
   preview.style.display='block';
   nf.style.display='none';
@@ -971,9 +1251,10 @@ function buscarBobina() {
  
 async function registrarSaida() {
   if (!supabase) { toast('❌ Configure o Supabase primeiro'); return; }
+  if (!colaboradorLogado) { toast('❌ Faça login primeiro'); return; }
   if (!bobinaAtualSaida) { toast('⚠️ Nenhuma bobina selecionada'); return; }
  
-  const op = document.getElementById('sai-op').value.trim();
+  const op = colaboradorLogado.nome;
   const v  = bobinaAtualSaida;
   const btn = document.getElementById('btn-saida');
   btn.disabled = true; btn.textContent = 'Salvando...';
@@ -984,7 +1265,8 @@ async function registrarSaida() {
     // Liberar vaga
     const { error: errV } = await supabase.from('vagas').upsert({
       area: v.area, rua: v.rua, baia: v.baia,
-      ocupada: false, codigo: null, tipo: null, operador: null, entrada_em: null
+      ocupada: false, codigo: null, tipo: null, operador: null, entrada_em: null,
+      quantidade: null, bitola: null, oxidacao: null
     }, { onConflict: 'area,rua,baia' });
     if (errV) throw errV;
  
@@ -992,18 +1274,18 @@ async function registrarSaida() {
     const { error: errH } = await supabase.from('historico').insert({
       tipo_mov: 'saida', codigo: v.codigo,
       area: v.area, rua: v.rua, baia: v.baia, tipo_bobina: v.tipo,
-      operador: op, criado_em: agora
+      operador: op, criado_em: agora,
+      quantidade: v.quantidade, bitola: v.bitola, oxidacao: v.oxidacao
     });
     if (errH) throw errH;
  
     toast('✅ Saída registrada!');
     document.getElementById('sai-cod').value = '';
-    document.getElementById('sai-op').value = '';
     document.getElementById('sai-preview').style.display = 'none';
     bobinaAtualSaida = null;
     await carregarTudo();
   } catch(e) {
-    toast('❌ Erro: ' + e.message);
+    toast('❌ Erro ao salvar: ' + e.message);
   } finally {
     btn.disabled = false; btn.textContent = 'Confirmar Saída';
   }
@@ -1012,13 +1294,64 @@ async function registrarSaida() {
 // ══════════════════════════════════════════════════════════
 // HISTÓRICO
 // ══════════════════════════════════════════════════════════
-function renderHistorico() {
-  const busca   = document.getElementById('hist-busca').value.toLowerCase();
-  const filtro  = document.getElementById('hist-filtro').value;
-  const tbody   = document.getElementById('hist-body');
+let histSubtab = 'entrada';
  
-  let itens = historico;
-  if (filtro) itens = itens.filter(h => h.tipo_mov === filtro);
+function setHistSubtab(tipo) {
+  histSubtab = tipo;
+  document.getElementById('hsub-entrada').classList.toggle('active', tipo === 'entrada');
+  document.getElementById('hsub-saida').classList.toggle('active', tipo === 'saida');
+  renderHistorico();
+}
+ 
+function popularAnos() {
+  const sel = document.getElementById('hist-ano');
+  if (sel.options.length) return;
+  const anoAtual = new Date().getFullYear();
+  let html = '';
+  for (let a = anoAtual; a >= anoAtual - 5; a--) html += `<option value="${a}">${a}</option>`;
+  sel.innerHTML = html;
+}
+ 
+function togglePeriodoInputs() {
+  const tipo = document.getElementById('hist-periodo-tipo').value;
+  document.getElementById('hist-dia').style.display = tipo === 'dia' ? 'block' : 'none';
+  document.getElementById('hist-mes').style.display = tipo === 'mes' ? 'block' : 'none';
+  document.getElementById('hist-ano').style.display = tipo === 'ano' ? 'block' : 'none';
+}
+ 
+function passaNoPeriodo(h) {
+  const tipo = document.getElementById('hist-periodo-tipo').value;
+  if (tipo === 'todos') return true;
+  const d = new Date(h.criado_em);
+  if (tipo === 'dia') {
+    const v = document.getElementById('hist-dia').value; // YYYY-MM-DD
+    if (!v) return true;
+    const local = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    return local === v;
+  }
+  if (tipo === 'mes') {
+    const v = document.getElementById('hist-mes').value; // YYYY-MM
+    if (!v) return true;
+    const local = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    return local === v;
+  }
+  if (tipo === 'ano') {
+    const v = document.getElementById('hist-ano').value;
+    if (!v) return true;
+    return String(d.getFullYear()) === String(v);
+  }
+  return true;
+}
+ 
+function renderHistorico() {
+  popularAnos();
+  togglePeriodoInputs();
+ 
+  const busca = document.getElementById('hist-busca').value.toLowerCase();
+  const tbody = document.getElementById('hist-body');
+ 
+  let itens = historico.filter(h => h.tipo_mov === histSubtab);
+  itens = itens.filter(passaNoPeriodo);
   if (busca) itens = itens.filter(h =>
     (h.codigo||'').toLowerCase().includes(busca) ||
     (h.operador||'').toLowerCase().includes(busca) ||
@@ -1026,17 +1359,19 @@ function renderHistorico() {
   );
  
   if (!itens.length) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--muted)">Nenhum registro encontrado</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Nenhum registro encontrado</td></tr>`;
     return;
   }
  
-  tbody.innerHTML = itens.slice(0,200).map(h => `
+  tbody.innerHTML = itens.slice(0,300).map(h => `
     <tr>
       <td>${fmtDatetime(h.criado_em)}</td>
-      <td><span class="badge ${h.tipo_mov}">${h.tipo_mov === 'entrada' ? '➕ Entrada' : '↗ Saída'}</span></td>
       <td style="font-family:monospace;color:var(--text)">${h.codigo || '—'}</td>
       <td>${h.area === 'frente' ? 'Frente' : 'Fundo'} R${pad2(h.rua)} B${pad2(h.baia)}</td>
       <td>${labelTipo(h.tipo_bobina)}</td>
+      <td>${h.quantidade ?? '—'}</td>
+      <td>${h.bitola || '—'}</td>
+      <td>${h.oxidacao ? 'Nível ' + h.oxidacao : '—'}</td>
       <td>${h.operador || '—'}</td>
     </tr>
   `).join('');
@@ -1174,7 +1509,8 @@ function labelTipo(t) {
 // INIT
 // ══════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
-  atualizarVagasEntrada();
+  checarSessao();
+  atualizarRuasEntrada();
   renderMapa('frente');
   renderMapa('fundo');
   renderStats();
@@ -1182,7 +1518,10 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 </script>
  
-<!-- SQL para criar as tabelas no Supabase:
+<!-- SQL para criar/atualizar as tabelas no Supabase (rodar no SQL Editor):
+ 
+-- Se as tabelas "vagas" e "historico" já existem, rode só os ALTER TABLE
+-- para adicionar as colunas novas (quantidade, bitola, oxidacao).
  
 CREATE TABLE IF NOT EXISTS vagas (
   id        bigserial PRIMARY KEY,
@@ -1194,8 +1533,14 @@ CREATE TABLE IF NOT EXISTS vagas (
   tipo      text,                   -- normal | recup | nconf | maquina
   operador  text,
   entrada_em timestamptz,
+  quantidade int,
+  bitola    text,
+  oxidacao  int,
   UNIQUE (area, rua, baia)
 );
+ALTER TABLE vagas ADD COLUMN IF NOT EXISTS quantidade int;
+ALTER TABLE vagas ADD COLUMN IF NOT EXISTS bitola text;
+ALTER TABLE vagas ADD COLUMN IF NOT EXISTS oxidacao int;
  
 CREATE TABLE IF NOT EXISTS historico (
   id         bigserial PRIMARY KEY,
@@ -1206,16 +1551,58 @@ CREATE TABLE IF NOT EXISTS historico (
   baia       int,
   tipo_bobina text,
   operador   text,
-  criado_em  timestamptz DEFAULT now()
+  criado_em  timestamptz DEFAULT now(),
+  quantidade int,
+  bitola    text,
+  oxidacao  int
+);
+ALTER TABLE historico ADD COLUMN IF NOT EXISTS quantidade int;
+ALTER TABLE historico ADD COLUMN IF NOT EXISTS bitola text;
+ALTER TABLE historico ADD COLUMN IF NOT EXISTS oxidacao int;
+ 
+-- Tabela de colaboradores para o login (sem Supabase Auth, então não
+-- pede confirmação de e-mail — é uma tabela simples com senha em hash).
+CREATE TABLE IF NOT EXISTS colaboradores (
+  id          bigserial PRIMARY KEY,
+  nome        text NOT NULL,
+  email       text NOT NULL UNIQUE,
+  matricula   text NOT NULL,
+  senha_hash  text NOT NULL,
+  criado_em   timestamptz DEFAULT now()
 );
  
--- Habilitar Realtime nas duas tabelas no painel do Supabase:
--- Database > Replication > vagas ✓ e historico ✓
+-- IMPORTANTE — políticas de acesso (RLS).
+-- Por padrão o Supabase bloqueia INSERT/UPDATE de quem usa a chave anônima
+-- assim que o RLS é ativado. Isso é o motivo mais comum do erro "Erro ao
+-- salvar" ao tentar dar entrada ou saída. Rode isto para liberar o app
+-- (ele é interno/uso do pátio, sem dados sensíveis de fora):
+ 
+ALTER TABLE vagas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "acesso total vagas" ON vagas;
+CREATE POLICY "acesso total vagas" ON vagas FOR ALL USING (true) WITH CHECK (true);
+ 
+ALTER TABLE historico ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "acesso total historico" ON historico;
+CREATE POLICY "acesso total historico" ON historico FOR ALL USING (true) WITH CHECK (true);
+ 
+ALTER TABLE colaboradores ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "acesso total colaboradores" ON colaboradores;
+CREATE POLICY "acesso total colaboradores" ON colaboradores FOR ALL USING (true) WITH CHECK (true);
+ 
+-- Habilitar Realtime nas tabelas no painel do Supabase:
+-- Database > Replication > vagas ✓, historico ✓ (colaboradores não precisa)
  
 -->
+ 
+<script>
+// Preenche a lista de tipos aceita como fixa (Máquina/Estac. continua
+// existindo internamente para as baias fixas da Rua 01, só não é mais
+// uma opção que o operador escolhe manualmente no formulário).
+</script>
 </body>
 </html>
  
-
-
-
+ 
+ 
+ 
+ 
