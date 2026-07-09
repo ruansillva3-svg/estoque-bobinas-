@@ -68,15 +68,9 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
 /* ── CONFIG SUPABASE ── */
 #supabase-cfg {
   display: none; align-items: center; gap: 10px;
-  padding: 14px 20px; background: var(--surface2); border-bottom: 1px solid var(--border);
+  padding: 8px 20px; background: var(--surface2); border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
-  position: fixed; top: 0; left: 0; right: 0; z-index: 5000;
-  box-shadow: 0 6px 18px rgba(0,0,0,.4);
-}
-#supabase-cfg.open { display: flex !important; }
-#supabase-cfg .cfg-close {
-  margin-left: auto; background: none; border: 1px solid var(--border2); color: var(--muted);
-  padding: 5px 12px; border-radius: var(--radius); font-size: 11px; cursor: pointer; font-family: var(--font);
+  position: relative; z-index: 1100;
 }
 #supabase-cfg input {
   background: var(--bg); border: 1px solid var(--border2); color: var(--text);
@@ -428,7 +422,7 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
 </div>
  
 <!-- CONFIG SUPABASE -->
-<div id="supabase-cfg">
+<div id="supabase-cfg" style="display:none">
   <div>
     <label>Supabase URL</label>
     <input id="cfg-url" type="text" placeholder="https://xxxx.supabase.co">
@@ -438,7 +432,6 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
     <input id="cfg-key" type="text" placeholder="eyJ...">
   </div>
   <button class="cfg-btn" onclick="saveCfg()">Salvar e conectar</button>
-  <button class="cfg-close" onclick="toggleCfg()">✕ Fechar</button>
 </div>
  
 <!-- TABS -->
@@ -527,8 +520,8 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
           <select id="ent-rua" onchange="atualizarBaiasEntrada()"></select>
         </div>
         <div class="form-group">
-          <label>Baia</label>
-          <select id="ent-baia"></select>
+          <label>Baia(s) <span style="color:var(--muted);font-weight:400">— selecione uma ou mais</span></label>
+          <div id="ent-baia-list" style="display:flex;flex-wrap:wrap;gap:6px;max-height:160px;overflow-y:auto;border:1px solid var(--border2);border-radius:var(--radius);padding:8px;background:var(--bg)"></div>
         </div>
       </div>
  
@@ -1098,19 +1091,32 @@ function atualizarRuasEntrada() {
   atualizarBaiasEntrada();
 }
  
-// Regenera só a lista de BAIAS, preservando a Rua selecionada.
+// Regenera a lista de BAIAS como checkboxes (permite marcar mais de uma,
+// já que na prática um material às vezes ocupa 2-3 baias seguidas).
 function atualizarBaiasEntrada() {
   const area = document.getElementById('ent-area').value;
   const tipo = document.getElementById('ent-tipo').value;
   const ruaSel = document.getElementById('ent-rua');
-  const baiaSel = document.getElementById('ent-baia');
+  const lista = document.getElementById('ent-baia-list');
  
   const ruaN = parseInt(ruaSel.value);
   const baiasDisponiveis = getBaiasDisponiveis(area, ruaN, tipo);
-  baiaSel.innerHTML = baiasDisponiveis
-    .filter(b => { const v = vagas[chaveVaga(area, ruaN, b)]; return !v || !v.ocupada; })
-    .map(b => `<option value="${b}">Baia ${pad2(b)}</option>`)
-    .join('');
+  const livres = baiasDisponiveis.filter(b => { const v = vagas[chaveVaga(area, ruaN, b)]; return !v || !v.ocupada; });
+ 
+  if (!livres.length) {
+    lista.innerHTML = `<span style="color:var(--muted);font-size:12px">Nenhuma baia livre nesta rua</span>`;
+    return;
+  }
+ 
+  lista.innerHTML = livres.map(b => `
+    <label style="display:flex;align-items:center;gap:4px;font-size:12px;background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:5px 9px;cursor:pointer">
+      <input type="checkbox" class="ent-baia-chk" value="${b}"> Baia ${pad2(b)}
+    </label>
+  `).join('');
+}
+ 
+function getBaiasEntradaSelecionadas() {
+  return Array.from(document.querySelectorAll('.ent-baia-chk:checked')).map(el => parseInt(el.value));
 }
  
 function getRuasDisponiveis(area, tipo) {
@@ -1140,7 +1146,8 @@ function preencherEntrada(area, rua, baia) {
   atualizarRuasEntrada();
   document.getElementById('ent-rua').value = rua;
   atualizarBaiasEntrada();
-  document.getElementById('ent-baia').value = baia;
+  const chk = document.querySelector(`.ent-baia-chk[value="${baia}"]`);
+  if (chk) chk.checked = true;
   document.getElementById('ent-cod').focus();
 }
  
@@ -1152,18 +1159,16 @@ async function registrarEntrada() {
   const area     = document.getElementById('ent-area').value;
   const tipo     = document.getElementById('ent-tipo').value;
   const rua      = parseInt(document.getElementById('ent-rua').value);
-  const baia     = parseInt(document.getElementById('ent-baia').value);
+  const baias    = getBaiasEntradaSelecionadas();
   const qtd      = parseInt(document.getElementById('ent-qtd').value) || 1;
   const bitola   = document.getElementById('ent-bitola').value.trim();
   const oxidacao = parseInt(document.getElementById('ent-oxidacao').value);
   const op       = colaboradorLogado.nome;
  
   if (!cod) { toast('⚠️ Informe o código da bobina'); return; }
-  if (!rua || !baia) { toast('⚠️ Selecione rua e baia'); return; }
- 
-  // Checar se já existe no pátio
-  const jaExiste = Object.values(vagas).find(v => v.ocupada && v.codigo === cod);
-  if (jaExiste) { toast('⚠️ Esta bobina já está no pátio'); return; }
+  if (!rua || !baias.length) { toast('⚠️ Selecione a rua e ao menos uma baia'); return; }
+  // Obs: não bloqueamos mais códigos repetidos — o mesmo material pode
+  // ficar espalhado em mais de uma rua/baia no pátio, é comum na usina.
  
   const btn = document.getElementById('btn-entrada');
   btn.disabled = true; btn.textContent = 'Salvando...';
@@ -1171,22 +1176,23 @@ async function registrarEntrada() {
   const agora = new Date().toISOString();
  
   try {
-    // Upsert na tabela vagas
-    const { error: errV } = await supabase.from('vagas').upsert({
-      area, rua, baia, ocupada: true,
-      codigo: cod, tipo, operador: op, entrada_em: agora,
-      quantidade: qtd, bitola, oxidacao
-    }, { onConflict: 'area,rua,baia' });
-    if (errV) throw errV;
+    // Uma baia por vez: upsert em "vagas" + registro em "historico" para cada uma
+    for (const baia of baias) {
+      const { error: errV } = await supabase.from('vagas').upsert({
+        area, rua, baia, ocupada: true,
+        codigo: cod, tipo, operador: op, entrada_em: agora,
+        quantidade: qtd, bitola, oxidacao
+      }, { onConflict: 'area,rua,baia' });
+      if (errV) throw errV;
  
-    // Inserir no histórico
-    const { error: errH } = await supabase.from('historico').insert({
-      tipo_mov: 'entrada', codigo: cod,
-      area, rua, baia, tipo_bobina: tipo,
-      operador: op, criado_em: agora,
-      quantidade: qtd, bitola, oxidacao
-    });
-    if (errH) throw errH;
+      const { error: errH } = await supabase.from('historico').insert({
+        tipo_mov: 'entrada', codigo: cod,
+        area, rua, baia, tipo_bobina: tipo,
+        operador: op, criado_em: agora,
+        quantidade: qtd, bitola, oxidacao
+      });
+      if (errH) throw errH;
+    }
  
     toast('✅ Entrada registrada!');
     limparFormEntrada();
@@ -1395,9 +1401,9 @@ function copyUrl() {
 // ══════════════════════════════════════════════════════════
 function toggleCfg() {
   const el = document.getElementById('supabase-cfg');
-  const abrindo = !el.classList.contains('open');
-  el.classList.toggle('open', abrindo);
-  if (abrindo) {
+  const open = el.style.display === 'flex';
+  el.style.display = open ? 'none' : 'flex';
+  if (!open) {
     document.getElementById('cfg-url').value = SB_URL;
     document.getElementById('cfg-key').value = SB_KEY;
   }
@@ -1408,7 +1414,7 @@ function saveCfg() {
   SB_KEY = document.getElementById('cfg-key').value.trim();
   localStorage.setItem('sb_url', SB_URL);
   localStorage.setItem('sb_key', SB_KEY);
-  document.getElementById('supabase-cfg').classList.remove('open');
+  document.getElementById('supabase-cfg').style.display = 'none';
   supabase = null;
   initSupabase();
 }
@@ -1607,4 +1613,3 @@ CREATE POLICY "acesso total colaboradores" ON colaboradores FOR ALL USING (true)
  
  
  
-
