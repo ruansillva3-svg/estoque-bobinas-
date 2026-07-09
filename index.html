@@ -65,25 +65,6 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
 .sync-badge.offline .dot { background: #f87171; animation: none; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
  
-/* ── CONFIG SUPABASE ── */
-#supabase-cfg {
-  display: none; align-items: center; gap: 10px;
-  padding: 8px 20px; background: var(--surface2); border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
-  position: relative; z-index: 1100;
-}
-#supabase-cfg input {
-  background: var(--bg); border: 1px solid var(--border2); color: var(--text);
-  font-family: var(--font); font-size: 11px; padding: 5px 10px;
-  border-radius: var(--radius); outline: none; width: 280px;
-}
-#supabase-cfg input:focus { border-color: var(--blue); }
-#supabase-cfg label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
-.cfg-btn {
-  padding: 5px 14px; background: var(--blue); color: #fff; border: none;
-  border-radius: var(--radius); font-size: 11px; font-weight: 600; cursor: pointer;
-}
- 
 /* ── TABS ── */
 #tabs {
   display: flex; align-items: center; gap: 0;
@@ -401,8 +382,6 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
       </div>
       <button class="btn-primary" id="btn-cadastrar" onclick="fazerCadastro()">Criar cadastro e entrar</button>
     </div>
- 
-    <button class="btn-secondary" onclick="toggleCfg()" style="margin-top:14px">⚙ Configurar Supabase</button>
   </div>
 </div>
  
@@ -416,22 +395,8 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
       👤 <span id="user-chip-nome">—</span>
       <button onclick="fazerLogout()">sair</button>
     </div>
-    <button onclick="toggleCfg()" style="background:none;border:1px solid var(--border2);color:var(--muted);padding:4px 10px;border-radius:var(--radius);font-size:11px;cursor:pointer;font-family:var(--font)">⚙ Config</button>
     <div class="sync-badge offline" id="sync-badge"><div class="dot"></div><span id="sync-text">Desconectado</span></div>
   </div>
-</div>
- 
-<!-- CONFIG SUPABASE -->
-<div id="supabase-cfg" style="display:none">
-  <div>
-    <label>Supabase URL</label>
-    <input id="cfg-url" type="text" placeholder="https://xxxx.supabase.co">
-  </div>
-  <div>
-    <label>Anon Key</label>
-    <input id="cfg-key" type="text" placeholder="eyJ...">
-  </div>
-  <button class="cfg-btn" onclick="saveCfg()">Salvar e conectar</button>
 </div>
  
 <!-- TABS -->
@@ -527,7 +492,7 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
  
       <div class="form-row">
         <div class="form-group">
-          <label>Quantidade de bobinas</label>
+          <label>Quantidade de bobinas <span style="color:var(--muted);font-weight:400">— total, será dividido entre as baias marcadas</span></label>
           <input id="ent-qtd" type="number" min="1" step="1" value="1">
         </div>
         <div class="form-group">
@@ -688,8 +653,10 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
 const SB_URL_PADRAO = 'https://vsgkaagdxidgvtrzeyuy.supabase.co';
 const SB_KEY_PADRAO = 'sb_publishable_4gH0wAaqh8kr9U7BH5xA6Q_Eiprw8FY';
  
-let SB_URL = localStorage.getItem('sb_url') || SB_URL_PADRAO;
-let SB_KEY = localStorage.getItem('sb_key') || SB_KEY_PADRAO;
+// Fixas no código — não existe mais tela para trocar isso pelo site,
+// evitando que alguém derrube a conexão sem querer.
+const SB_URL = SB_URL_PADRAO;
+const SB_KEY = SB_KEY_PADRAO;
 let supabase = null;
 let vagas = {};       // chave: "area-rua-baia" → objeto da vaga
 let historico = [];   // todos os registros carregados
@@ -781,7 +748,7 @@ function loginErro(msg) {
 }
  
 async function fazerCadastro() {
-  if (!supabase) { loginErro('Configure o Supabase primeiro (botão ⚙ Config).'); return; }
+  if (!supabase) { loginErro('Erro de conexão com o servidor. Recarregue a página.'); return; }
   const nome = document.getElementById('cd-nome').value.trim();
   const email = document.getElementById('cd-email').value.trim().toLowerCase();
   const matricula = document.getElementById('cd-matricula').value.trim();
@@ -813,7 +780,7 @@ async function fazerCadastro() {
 }
  
 async function fazerLogin() {
-  if (!supabase) { loginErro('Configure o Supabase primeiro (botão ⚙ Config).'); return; }
+  if (!supabase) { loginErro('Erro de conexão com o servidor. Recarregue a página.'); return; }
   const email = document.getElementById('lg-email').value.trim().toLowerCase();
   const senha = document.getElementById('lg-senha').value;
   if (!email || !senha) { loginErro('Informe e-mail e senha.'); return; }
@@ -1126,6 +1093,19 @@ function getBaiasEntradaSelecionadas() {
   return Array.from(document.querySelectorAll('.ent-baia-chk:checked')).map(el => parseInt(el.value));
 }
  
+// Divide a quantidade TOTAL informada entre as N baias marcadas.
+// Ex: 200 bobinas em 2 baias -> 100 e 100. 201 em 2 baias -> 101 e 100.
+function distribuirQuantidade(total, n) {
+  const base = Math.floor(total / n);
+  let resto = total % n;
+  const partes = [];
+  for (let i = 0; i < n; i++) {
+    partes.push(base + (resto > 0 ? 1 : 0));
+    if (resto > 0) resto--;
+  }
+  return partes;
+}
+ 
 function getRuasDisponiveis(area, tipo) {
   if (area === 'frente') {
     if (tipo === 'recup' || tipo === 'maquina' || tipo === 'nconf') return [1];
@@ -1159,7 +1139,7 @@ function preencherEntrada(area, rua, baia) {
 }
  
 async function registrarEntrada() {
-  if (!supabase) { toast('❌ Configure o Supabase primeiro'); return; }
+  if (!supabase) { toast('❌ Erro de conexão com o servidor. Recarregue a página.'); return; }
   if (!colaboradorLogado) { toast('❌ Faça login primeiro'); return; }
  
   const cod      = document.getElementById('ent-cod').value.trim();
@@ -1183,12 +1163,17 @@ async function registrarEntrada() {
   const agora = new Date().toISOString();
  
   try {
-    // Uma baia por vez: upsert em "vagas" + registro em "historico" para cada uma
-    for (const baia of baias) {
+    // Divide a quantidade TOTAL entre as baias marcadas (não repete o total em cada uma)
+    const quantidades = distribuirQuantidade(qtd, baias.length);
+ 
+    for (let i = 0; i < baias.length; i++) {
+      const baia = baias[i];
+      const qtdBaia = quantidades[i];
+ 
       const { error: errV } = await supabase.from('vagas').upsert({
         area, rua, baia, ocupada: true,
         codigo: cod, tipo, operador: op, entrada_em: agora,
-        quantidade: qtd, bitola, oxidacao
+        quantidade: qtdBaia, bitola, oxidacao
       }, { onConflict: 'area,rua,baia' });
       if (errV) throw errV;
  
@@ -1196,7 +1181,7 @@ async function registrarEntrada() {
         tipo_mov: 'entrada', codigo: cod,
         area, rua, baia, tipo_bobina: tipo,
         operador: op, criado_em: agora,
-        quantidade: qtd, bitola, oxidacao
+        quantidade: qtdBaia, bitola, oxidacao
       });
       if (errH) throw errH;
     }
@@ -1264,7 +1249,7 @@ function buscarBobina() {
 }
  
 async function registrarSaida() {
-  if (!supabase) { toast('❌ Configure o Supabase primeiro'); return; }
+  if (!supabase) { toast('❌ Erro de conexão com o servidor. Recarregue a página.'); return; }
   if (!colaboradorLogado) { toast('❌ Faça login primeiro'); return; }
   if (!bobinaAtualSaida) { toast('⚠️ Nenhuma bobina selecionada'); return; }
  
@@ -1401,29 +1386,6 @@ function initQR() {
 }
 function copyUrl() {
   navigator.clipboard.writeText(window.location.href).then(() => toast('✅ Link copiado!'));
-}
- 
-// ══════════════════════════════════════════════════════════
-// CONFIG
-// ══════════════════════════════════════════════════════════
-function toggleCfg() {
-  const el = document.getElementById('supabase-cfg');
-  const open = el.style.display === 'flex';
-  el.style.display = open ? 'none' : 'flex';
-  if (!open) {
-    document.getElementById('cfg-url').value = SB_URL;
-    document.getElementById('cfg-key').value = SB_KEY;
-  }
-}
- 
-function saveCfg() {
-  SB_URL = document.getElementById('cfg-url').value.trim();
-  SB_KEY = document.getElementById('cfg-key').value.trim();
-  localStorage.setItem('sb_url', SB_URL);
-  localStorage.setItem('sb_key', SB_KEY);
-  document.getElementById('supabase-cfg').style.display = 'none';
-  supabase = null;
-  initSupabase();
 }
  
 // ══════════════════════════════════════════════════════════
@@ -1626,3 +1588,5 @@ CREATE POLICY "acesso total colaboradores" ON colaboradores FOR ALL USING (true)
  
  
  
+
+
