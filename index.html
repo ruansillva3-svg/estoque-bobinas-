@@ -1050,6 +1050,9 @@ function clickVaga(area, rua, baia) {
     btn.onclick = () => { closeModal(); preencherEntrada(area, rua, baia); };
   } else {
     const dias = diffDias(vaga.entrada_em);
+    const fifoAlerta = dias >= 7
+      ? `<div style="margin-top:10px;background:rgba(217,119,6,.12);border:1px solid rgba(217,119,6,.3);color:var(--orange);border-radius:6px;padding:6px 10px;font-size:11px;font-weight:600">⚠ FIFO urgente — ${dias} dias no pátio</div>`
+      : '';
     document.getElementById('modal-sub').textContent = 'Vaga ocupada';
     document.getElementById('modal-info').innerHTML = `
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
@@ -1057,8 +1060,12 @@ function clickVaga(area, rua, baia) {
         <div><span style="color:var(--muted)">Tipo: </span><b>${labelTipo(vaga.tipo)}</b></div>
         <div><span style="color:var(--muted)">Entrada: </span><b>${fmtDate(vaga.entrada_em)}</b></div>
         <div><span style="color:var(--muted)">Dias no pátio: </span><b style="color:${dias>=7?'var(--c-fifo)':'inherit'}">${dias}d</b></div>
+        <div><span style="color:var(--muted)">Quantidade: </span><b>${vaga.quantidade ?? '—'}</b></div>
+        <div><span style="color:var(--muted)">Bitola: </span><b>${vaga.bitola || '—'}</b></div>
+        <div><span style="color:var(--muted)">Oxidação: </span><b>${vaga.oxidacao ? 'Nível ' + vaga.oxidacao : '—'}</b></div>
         <div><span style="color:var(--muted)">Operador: </span><b>${vaga.operador || '—'}</b></div>
       </div>
+      ${fifoAlerta}
     `;
     const btn = document.getElementById('modal-action-btn');
     btn.style.display = 'block';
@@ -1494,8 +1501,14 @@ function pad2(n) { return String(n).padStart(2,'0'); }
  
 function diffDias(iso) {
   if (!iso) return 0;
-  const ms = Date.now() - new Date(iso).getTime();
-  return Math.floor(ms / 86400000);
+  // Conta por dia de calendário (não por 24h exatas), pra bater com a
+  // expectativa de "entrou ontem = 1 dia", mesmo que tenham passado
+  // poucas horas de relógio.
+  const entrada = new Date(iso);
+  const hoje = new Date();
+  const d1 = new Date(entrada.getFullYear(), entrada.getMonth(), entrada.getDate());
+  const d2 = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  return Math.round((d2 - d1) / 86400000);
 }
  
 function fmtDate(iso) {
