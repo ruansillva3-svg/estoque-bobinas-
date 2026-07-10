@@ -264,6 +264,20 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
 .modal-close { margin-top: 10px; width: 100%; padding: 8px; background: none; border: 1px solid var(--border2); color: var(--muted); border-radius: var(--radius); cursor: pointer; font-family: var(--font); font-size: 12px; }
 .modal-close:hover { border-color: var(--blue); color: var(--text); }
  
+/* ── LOCAIS (SAÍDA) ── */
+.local-card {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 11px 14px; margin-bottom: 8px; cursor: pointer; transition: border-color .1s;
+}
+.local-card:hover { border-color: var(--blue); }
+.local-card.selected { border-color: var(--blue); background: rgba(37,99,235,.12); }
+.local-card .loc-nome { font-size: 13px; font-weight: 700; }
+.local-card .loc-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.local-card .loc-qtd { font-size: 18px; font-weight: 700; color: var(--blue); text-align: right; }
+.local-card .loc-qtd-label { font-size: 10px; color: var(--muted); text-align: right; }
+.local-card.selected .loc-qtd { color: #60a5fa; }
+ 
 /* ── TOAST ── */
 #toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
@@ -538,19 +552,38 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
         <div class="scanner-hint">📡 Compatível com leitor de código de barras (USB/HID)</div>
       </div>
  
+      <div id="sai-multi" style="display:none">
+        <div class="form-group">
+          <label>Local(is) encontrado(s) no pátio <span style="color:var(--muted);font-weight:400">— toque para escolher de onde tirar</span></label>
+          <div id="sai-locais"></div>
+        </div>
+      </div>
+ 
       <div id="sai-preview" style="display:none">
         <div class="modal-info" style="margin-bottom:16px">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">BOBINA ENCONTRADA</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">LOCAL SELECIONADO</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
             <div><span style="color:var(--muted)">Localização: </span><b id="sai-loc">—</b></div>
             <div><span style="color:var(--muted)">Tipo: </span><b id="sai-tipo-info">—</b></div>
             <div><span style="color:var(--muted)">Entrada: </span><b id="sai-data">—</b></div>
             <div><span style="color:var(--muted)">Dias no pátio: </span><b id="sai-dias">—</b></div>
-            <div><span style="color:var(--muted)">Quantidade: </span><b id="sai-qtd">—</b></div>
+            <div><span style="color:var(--muted)">Disponível: </span><b id="sai-qtd">—</b></div>
             <div><span style="color:var(--muted)">Bitola: </span><b id="sai-bitola">—</b></div>
             <div><span style="color:var(--muted)">Oxidação: </span><b id="sai-oxidacao">—</b></div>
           </div>
         </div>
+ 
+        <div class="form-row">
+          <div class="form-group">
+            <label>Quantidade a retirar <span style="color:var(--muted);font-weight:400">— máx. <span id="sai-qtd-max">—</span></span></label>
+            <input id="sai-qtd-retirar" type="number" min="1" step="1">
+          </div>
+          <div class="form-group">
+            <label>Destino / Observação <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
+            <input id="sai-destino" type="text" placeholder="Ex: Linha de produção, Cliente X, OP 12345...">
+          </div>
+        </div>
+ 
         <div class="form-group">
           <label>Operador</label>
           <div class="op-display" id="sai-op-display">—</div>
@@ -604,6 +637,7 @@ tbody tr:hover td { background: var(--surface2); color: var(--text); }
             <th>Bitola</th>
             <th>Oxidação</th>
             <th>Operador</th>
+            <th>Destino / Obs.</th>
           </tr>
         </thead>
         <tbody id="hist-body">
@@ -1215,24 +1249,64 @@ function preencherSaida(cod) {
   buscarBobina();
 }
  
+let bobinasEncontradasSaida = [];
 let bobinaAtualSaida = null;
  
 function buscarBobina() {
   const cod = document.getElementById('sai-cod').value.trim().toUpperCase();
+  const multi = document.getElementById('sai-multi');
   const preview = document.getElementById('sai-preview');
   const nf = document.getElementById('sai-nf');
  
-  if (!cod) { preview.style.display='none'; nf.style.display='none'; return; }
+  bobinaAtualSaida = null;
+  preview.style.display = 'none';
  
-  const vaga = Object.values(vagas).find(v => v.ocupada && v.codigo?.toUpperCase() === cod);
-  if (!vaga) {
-    preview.style.display='none';
+  if (!cod) { multi.style.display='none'; nf.style.display='none'; bobinasEncontradasSaida = []; return; }
+ 
+  // Pode haver o MESMO código espalhado em vários locais do pátio
+  const achadas = Object.values(vagas)
+    .filter(v => v.ocupada && v.codigo?.toUpperCase() === cod)
+    .sort((a, b) => (b.quantidade || 0) - (a.quantidade || 0)); // maior quantidade primeiro
+ 
+  bobinasEncontradasSaida = achadas;
+ 
+  if (!achadas.length) {
+    multi.style.display='none';
     nf.style.display = cod.length >= 3 ? 'block' : 'none';
-    bobinaAtualSaida = null;
     return;
   }
+  nf.style.display = 'none';
  
+  const locaisBox = document.getElementById('sai-locais');
+  locaisBox.innerHTML = achadas.map((v, i) => {
+    const dias = diffDias(v.entrada_em);
+    return `
+      <div class="local-card" data-idx="${i}" onclick="selecionarLocalSaida(${i})">
+        <div>
+          <div class="loc-nome">${v.area === 'frente' ? 'Frente' : 'Fundo'} R${pad2(v.rua)} B${pad2(v.baia)}</div>
+          <div class="loc-sub">${labelTipo(v.tipo)} · ${dias}d no pátio${v.bitola ? ' · ' + v.bitola + 'mm' : ''}</div>
+        </div>
+        <div>
+          <div class="loc-qtd">${v.quantidade ?? '—'}</div>
+          <div class="loc-qtd-label">disponível</div>
+        </div>
+      </div>`;
+  }).join('');
+  multi.style.display = 'block';
+ 
+  // Se só tem 1 local, já seleciona automaticamente pra agilizar
+  if (achadas.length === 1) selecionarLocalSaida(0);
+}
+ 
+function selecionarLocalSaida(idx) {
+  const vaga = bobinasEncontradasSaida[idx];
+  if (!vaga) return;
   bobinaAtualSaida = vaga;
+ 
+  document.querySelectorAll('#sai-locais .local-card').forEach((el, i) => {
+    el.classList.toggle('selected', i === idx);
+  });
+ 
   const dias = diffDias(vaga.entrada_em);
   document.getElementById('sai-loc').textContent = `${vaga.area === 'frente' ? 'Frente' : 'Fundo'} R${pad2(vaga.rua)} B${pad2(vaga.baia)}`;
   document.getElementById('sai-tipo-info').textContent = labelTipo(vaga.tipo);
@@ -1240,48 +1314,74 @@ function buscarBobina() {
   document.getElementById('sai-dias').textContent = dias + 'd';
   document.getElementById('sai-dias').style.color = dias >= 7 ? 'var(--c-fifo)' : 'inherit';
   document.getElementById('sai-qtd').textContent = vaga.quantidade ?? '—';
+  document.getElementById('sai-qtd-max').textContent = vaga.quantidade ?? '—';
   document.getElementById('sai-bitola').textContent = vaga.bitola || '—';
   document.getElementById('sai-oxidacao').textContent = vaga.oxidacao ? `Nível ${vaga.oxidacao}` : '—';
   document.getElementById('sai-op-display').textContent = colaboradorLogado ? colaboradorLogado.nome : '—';
  
-  preview.style.display='block';
-  nf.style.display='none';
+  const inputQtd = document.getElementById('sai-qtd-retirar');
+  inputQtd.value = vaga.quantidade ?? 1;
+  inputQtd.max = vaga.quantidade ?? 1;
+  document.getElementById('sai-destino').value = '';
+ 
+  document.getElementById('sai-preview').style.display = 'block';
 }
  
 async function registrarSaida() {
   if (!supabase) { toast('❌ Erro de conexão com o servidor. Recarregue a página.'); return; }
   if (!colaboradorLogado) { toast('❌ Faça login primeiro'); return; }
-  if (!bobinaAtualSaida) { toast('⚠️ Nenhuma bobina selecionada'); return; }
+  if (!bobinaAtualSaida) { toast('⚠️ Selecione de qual local a bobina vai sair'); return; }
  
   const op = colaboradorLogado.nome;
   const v  = bobinaAtualSaida;
+  const disponivel = v.quantidade || 0;
+  const qtdRetirar = parseInt(document.getElementById('sai-qtd-retirar').value);
+  const destino = document.getElementById('sai-destino').value.trim();
+ 
+  if (!qtdRetirar || qtdRetirar < 1) { toast('⚠️ Informe a quantidade a retirar'); return; }
+  if (qtdRetirar > disponivel) { toast(`⚠️ Só há ${disponivel} disponível neste local`); return; }
+ 
   const btn = document.getElementById('btn-saida');
   btn.disabled = true; btn.textContent = 'Salvando...';
  
   const agora = new Date().toISOString();
+  const restante = disponivel - qtdRetirar;
  
   try {
-    // Liberar vaga
-    const { error: errV } = await supabase.from('vagas').upsert({
-      area: v.area, rua: v.rua, baia: v.baia,
-      ocupada: false, codigo: null, tipo: null, operador: null, entrada_em: null,
-      quantidade: null, bitola: null, oxidacao: null
-    }, { onConflict: 'area,rua,baia' });
-    if (errV) throw errV;
+    if (restante > 0) {
+      // Saída parcial: baia continua ocupada com o que sobrou
+      const { error: errV } = await supabase.from('vagas').upsert({
+        area: v.area, rua: v.rua, baia: v.baia,
+        ocupada: true, codigo: v.codigo, tipo: v.tipo, operador: op, entrada_em: v.entrada_em,
+        quantidade: restante, bitola: v.bitola, oxidacao: v.oxidacao
+      }, { onConflict: 'area,rua,baia' });
+      if (errV) throw errV;
+    } else {
+      // Saída total: libera a baia
+      const { error: errV } = await supabase.from('vagas').upsert({
+        area: v.area, rua: v.rua, baia: v.baia,
+        ocupada: false, codigo: null, tipo: null, operador: null, entrada_em: null,
+        quantidade: null, bitola: null, oxidacao: null
+      }, { onConflict: 'area,rua,baia' });
+      if (errV) throw errV;
+    }
  
-    // Histórico
+    // Histórico (guarda só a quantidade que realmente saiu, e o destino/observação)
     const { error: errH } = await supabase.from('historico').insert({
       tipo_mov: 'saida', codigo: v.codigo,
       area: v.area, rua: v.rua, baia: v.baia, tipo_bobina: v.tipo,
       operador: op, criado_em: agora,
-      quantidade: v.quantidade, bitola: v.bitola, oxidacao: v.oxidacao
+      quantidade: qtdRetirar, bitola: v.bitola, oxidacao: v.oxidacao,
+      observacao: destino || null
     });
     if (errH) throw errH;
  
-    toast('✅ Saída registrada!');
+    toast(restante > 0 ? `✅ Saída parcial registrada! (${restante} restante nesta baia)` : '✅ Saída registrada!');
     document.getElementById('sai-cod').value = '';
+    document.getElementById('sai-multi').style.display = 'none';
     document.getElementById('sai-preview').style.display = 'none';
     bobinaAtualSaida = null;
+    bobinasEncontradasSaida = [];
     await carregarTudo();
   } catch(e) {
     toast('❌ Erro ao salvar: ' + e.message);
@@ -1358,7 +1458,7 @@ function renderHistorico() {
   );
  
   if (!itens.length) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Nenhum registro encontrado</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted)">Nenhum registro encontrado</td></tr>`;
     return;
   }
  
@@ -1372,6 +1472,7 @@ function renderHistorico() {
       <td>${h.bitola || '—'}</td>
       <td>${h.oxidacao ? 'Nível ' + h.oxidacao : '—'}</td>
       <td>${h.operador || '—'}</td>
+      <td>${h.observacao || '—'}</td>
     </tr>
   `).join('');
 }
